@@ -1,3 +1,3 @@
 # lean-sketch
 
-A tool to generate sketches for Lean code.
+A tool that generates sketches for Lean code.
