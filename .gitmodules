@@ -1,3 +1,4 @@
 [submodule "jixia"]
 	path = jixia
 	url = https://github.com/pelicanhere/jixia.git
+	branch = symbol
