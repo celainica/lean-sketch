@@ -4,4 +4,8 @@ A tool that analyze the logic structure of lean codes to extract crucial proof s
 _________________________________________________________________________________________________________________________________________________________
 
 
-current project STATUS: using JIXIA to build a ELAB tree; using PAPERPROOF to build a GOAL tree. Extracting informations from these two trees.
+current project STATUS: 
+  using JIXIA to build a ELAB tree         √
+  using PAPERPROOF to build a GOAL tree
+  
+  Extracting informations from these two trees.
