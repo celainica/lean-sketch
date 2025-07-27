@@ -5,7 +5,7 @@ ________________________________________________________________________________
 
 
 current project STATUS: 
-  using JIXIA to build a ELAB tree         √
-  using PAPERPROOF to build a GOAL tree
-  
+  using JIXIA to build a ELAB tree      
+  using PAPERPROOF to build a GOAL tree      
+  <br>
   Extracting informations from these two trees.
