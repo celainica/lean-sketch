@@ -1,6 +1,7 @@
 import json
 import extractgraph
 import analyze_graph
+import prompt
 from pyvis.network import Network
 import subprocess
 import os
@@ -229,6 +230,14 @@ def build_graph():
             #################################################
  
  
+def save_file():
+    with open('crucialsteps.txt', 'w', encoding='utf-8') as f:
+        for node in elab_graph:
+            if not important[node]: continue
+            print(node.split('.',1)[0], file = f)
+            print(elab_graph[node]['label'], file=f)
+            print("\n\n",file = f)
+ 
  
         
 #------------------FOR DEBUG----------------------        
@@ -281,10 +290,12 @@ def leansketch(module, constant, searchlevel):
     
     
 if __name__ == "__main__":
-    thm ="""dsimp_test"""
-    leansketch("Example",thm,1)
+    thm ="""CONSTANT_NAME"""
+    leansketch("MODULE_NAME",thm,1)
     for node in elab_graph:
         important[node] = False
         score = analyze_graph.get_score(node,elab_graph)
         if score > 3: important[node] = True
     visualize(elab_graph)   
+    save_file()
+    prompt.prompt_llm("MODULE_NAME")
