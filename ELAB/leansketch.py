@@ -43,13 +43,17 @@ def get_module(const,module):
         sym = json.load(f)
     for d in sym:
         valuemod = d["valueModules"][0]
-        if const in valuemod and valuemod[const][0]!=None:
-            mod = valuemod[const][0]
+        pure_const_list = {}
+        for c in valuemod:
+            pure_const = c.split('.')[-1]
+            pure_const_list[pure_const] = c
+        if const in pure_const_list and valuemod[pure_const_list[const]][0]!=None:
+            mod = valuemod[pure_const_list[const]][0]
             mod_name = mod[0]
             for i in range(1,len(mod)):
                 mod_name = mod_name + '.' + str(mod[i])
             return mod_name
-        
+                
 def module_to_file(module,parent):   
     if module==main_module:
         file_path = "./"+main_module+".lean"
@@ -105,7 +109,7 @@ def analyze_constant(dg):         #return a list of interested constant, adding 
         while node in dg[node]['child']:dg[node]['child'].remove(node)
         if is_dep[node] and dg[node]['child']==[] and dg[node]['isConstant']:
             constant_list.append(dg[node]['label'])
-            print("Adding node :",node,dg[node]['label'],".")
+            print("Extending node :",node,dg[node]['label'],".")
     return constant_list          #a single constant can have many nodes
     
 def get_dep(node,dg):
@@ -117,13 +121,13 @@ def get_dep(node,dg):
     
 def analyze_elab_node(constant,dg):
     visited = {}
+    constant_in_code = constant.split('.')[-1]
     for node in dg:
         visited[node] = False
     for node in dg:
-        if constant in dg[node]['label']:
+        if constant_in_code in dg[node]['label'] and dg[node]['child']!=[]:
             start = node
             break
-    print("Constant added: ",constant)
     tr = start
     while(True):
         flag = False
@@ -136,6 +140,8 @@ def analyze_elab_node(constant,dg):
         if not flag: break
     return tr            
     
+def interested(module):
+    return True
 
 def build_graph():
     global elab_graph
@@ -154,6 +160,9 @@ def build_graph():
     for i in range(0, level):
         is_next_level = []
         for module in module_level[i]:
+            
+            if not interested(module) and i!=0: continue
+            
             print("__________________________________________________________")
             print("Level i=",i,". Analyzing module:",module)
             run_jixia(module_to_file(module,module_dep[module]['parent']),module)
@@ -161,9 +170,13 @@ def build_graph():
             dg = extractgraph.ExtractGraph(path,module)
             path = "./"+ module + ".sym.json"
             constants = get_constants(path)
-
+            
+            pure_constants = []
+            for c in constants:
+                pure_constants.append(c.rsplit('.', 1)[-1])
+                
             for node in dg:
-                if dg[node]['label'] in constants: dg[node]['isConstant'] = True
+                if dg[node]['label'] in pure_constants: dg[node]['isConstant'] = True
                 else: dg[node]['isConstant'] = False            
             
             #glue dg to elab_graph
@@ -189,6 +202,7 @@ def build_graph():
                 is_dep[node] = False
                             
             for root_node_constant in constants_extended[module]:
+                if root_node_constant in is_next_level: continue   #avoid same level but earlier constant that enters constants_extended
                 r = analyze_elab_node(root_node_constant,dg)
                 get_dep(r,dg)                  
             for node in dg:
@@ -209,25 +223,30 @@ def build_graph():
             constants_dg = analyze_constant(dg)  
             for const in constants_dg:
                 if const == None:continue
-                if const not in nodes_extended[i+1]: nodes_extended[i+1][const]=[]
+                #if const not in nodes_extended[i+1]: nodes_extended[i+1][const]=[]     SEEMS LIKE A MISTAKE
                 for node in dg:
-                    if dg[node]['label'] == const and dg[node]['child']==[] and is_dep[node]:
-                        nodes_extended[i+1][const]=[] 
+                    if dg[node]['label'] == const.rsplit('.', 1)[-1] and dg[node]['child']==[] and is_dep[node]:
+                        if const not in nodes_extended[i+1]:nodes_extended[i+1][const]=[] 
                         nodes_extended[i+1][const].append(node)
+                        
+            print("-----------------------------")
             for const in nodes_extended[i+1]:
                 m = get_module(const,module)                
                 if m==None: continue    
                 if const == None:continue
                 if m not in module_level[i+1] and m!=main_module: 
                     module_level[i+1].append(m)
-                    print(const,"opens module:",m,".")
+                    print("Const '",const,"' opens module:",m,".")
                     module_dep[m]={}
                     module_dep[m]['parent'] = module
                     constants_extended[m] = []
-                constants_extended[m].append(const)
+                if const not in constants_extended[m]: constants_extended[m].append(const)
                 is_next_level.append(const)
                 
             #################################################
+            print("-----------------------------")
+            print("In next round these constants and nodes will be extended:\n",nodes_extended[i+1])
+            print("These modules:\n",module_level[i+1])
  
  
 def save_file():
@@ -290,12 +309,12 @@ def leansketch(module, constant, searchlevel):
     
     
 if __name__ == "__main__":
-    thm ="""CONSTANT_NAME"""
-    leansketch("MODULE_NAME",thm,1)
+    thm ="""card_subgroup_dvd_card"""
+    leansketch("test",thm,3)
     for node in elab_graph:
         important[node] = False
         score = analyze_graph.get_score(node,elab_graph)
         if score > 3: important[node] = True
     visualize(elab_graph)   
     save_file()
-    prompt.prompt_llm("MODULE_NAME")
+    #prompt.prompt_llm("quadratic_reciprocity")
