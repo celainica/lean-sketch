@@ -8,7 +8,7 @@ import os
 
 elab_graph = {}   #key:module.{string position} value:dict with value:'child':list of subnodes 'label':node name，'isConstant':bool.
 
-module_dep = {}     #key:module   value:dict，'parent':any module that has key as a constant
+module_dep = {}     #key:module   value:dict，'parent':any module that has key as a constant. For using JIXIA to find module path.
 
 is_dep = {}
 
@@ -16,6 +16,11 @@ important = {}
 
 main_module = ""
 score={}
+
+#variables for prompting LLMs
+constant_definition = {}    #get interested constant list
+module_dependency = {}      #get module dependency tree
+
 
 def run_jixia(file_path, module_name): 
     if not os.path.isfile("./tmp." + module_name + ".lean"):
@@ -53,11 +58,11 @@ def get_module(const,module):
             for i in range(1,len(mod)):
                 mod_name = mod_name + '.' + str(mod[i])
             return mod_name
-                
+
 def module_to_file(module,parent):   
     if module==main_module:
         file_path = "./"+main_module+".lean"
-        return file_path
+        return file_path    
     sym_path = "./"+ parent + ".sym.json"
     with open(sym_path, 'r', encoding='utf-8') as f:
         sym = json.load(f)
@@ -71,6 +76,7 @@ def module_to_file(module,parent):
             if module_name==module:
                 file_path = d["valueModules"][0][const][1]
                 return file_path
+     
 
 def get_constants(file_path):        
     constants = []
@@ -141,15 +147,19 @@ def analyze_elab_node(constant,dg):
     return tr            
     
 def interested(module):
-    return True
+    if module[0:7]=="Mathlib":
+        return True
 
 def build_graph():
     global elab_graph
     global is_dep
     
+    global constant_definition
+    
     constants_extended = {}          #key:module   value:constants  level i+1 module <--> level i constant
     nodes_extended = []              #value:dict     its ith value: level i constant's nodes                   
-    module_level = []                #value:list         
+    module_level = []                #value:list     
+    is_next_level = []    
 
     for i in range(0,level+1): module_level.append([])
     for i in range(0,level+1): nodes_extended.append({})
@@ -158,11 +168,9 @@ def build_graph():
     module_dep[main_module]['parent']=""
     
     for i in range(0, level):
-        is_next_level = []
-        for module in module_level[i]:
-            
+        is_next_level.append([])
+        for module in module_level[i]:            
             if not interested(module) and i!=0: continue
-            
             print("__________________________________________________________")
             print("Level i=",i,". Analyzing module:",module)
             run_jixia(module_to_file(module,module_dep[module]['parent']),module)
@@ -200,11 +208,17 @@ def build_graph():
             for node in dg:
                 ii = ii+1
                 is_dep[node] = False
-                            
             for root_node_constant in constants_extended[module]:
-                if root_node_constant in is_next_level: continue   #avoid same level but earlier constant that enters constants_extended
+                print("i",i,"is_next_level",is_next_level)
+                if root_node_constant in is_next_level[i]: continue   #avoid same level but earlier constant that enters constants_extended
                 r = analyze_elab_node(root_node_constant,dg)
                 get_dep(r,dg)                  
+                
+                ###################FOR LLM############################### 
+                if root_node_constant not in constant_definition:
+                    constant_definition[root_node_constant] = dg[r]['label']
+                #########################################################
+                                
             for node in dg:
                 if is_dep[node] and (node not in elab_graph):
                     elab_graph[node] = {}
@@ -213,50 +227,51 @@ def build_graph():
                     elab_graph[node]['isConstant'] = dg[node]['isConstant']
 
             for root_node_constant in constants_extended[module]:
-                if root_node_constant in is_next_level :continue
+                if root_node_constant in is_next_level[i] :continue
                 for n in nodes_extended[i][root_node_constant]:
                     connect_root = analyze_elab_node(root_node_constant,dg)
                     for children in dg[connect_root]['child']:
                         elab_graph[n]['child'].append(children)
 
             #################################################      preparing for i+1
-            constants_dg = analyze_constant(dg)  
+            constants_dg = analyze_constant(dg)              
             for const in constants_dg:
                 if const == None:continue
                 #if const not in nodes_extended[i+1]: nodes_extended[i+1][const]=[]     SEEMS LIKE A MISTAKE
                 for node in dg:
                     if dg[node]['label'] == const.rsplit('.', 1)[-1] and dg[node]['child']==[] and is_dep[node]:
                         if const not in nodes_extended[i+1]:nodes_extended[i+1][const]=[] 
-                        nodes_extended[i+1][const].append(node)
-                        
+                        nodes_extended[i+1][const].append(node)            
             print("-----------------------------")
             for const in nodes_extended[i+1]:
                 m = get_module(const,module)                
                 if m==None: continue    
-                if const == None:continue
+                if const == None:continue            
                 if m not in module_level[i+1] and m!=main_module: 
                     module_level[i+1].append(m)
                     print("Const '",const,"' opens module:",m,".")
                     module_dep[m]={}
                     module_dep[m]['parent'] = module
-                    constants_extended[m] = []
-                if const not in constants_extended[m]: constants_extended[m].append(const)
-                is_next_level.append(const)
+                    if m not in constants_extended: constants_extended[m] = []
+                if const not in constants_extended[m]: 
+                    constants_extended[m].append(const)      
+                if i==0: 
+                    is_next_level[0].append(const)
+                    continue
+                if const not in is_next_level[i-1]: is_next_level[i].append(const)
                 
             #################################################
-            print("-----------------------------")
-            print("In next round these constants and nodes will be extended:\n",nodes_extended[i+1])
-            print("These modules:\n",module_level[i+1])
+        print("-----------------------------")
+        print("In next round these constants and nodes will be extended:\n",nodes_extended[i+1])
+        print("These modules:\n",module_level[i+1])                
  
  
-def save_file():
-    with open('crucialsteps.txt', 'w', encoding='utf-8') as f:
-        for node in elab_graph:
-            if not important[node]: continue
-            print(node.split('.',1)[0], file = f)
-            print(elab_graph[node]['label'], file=f)
-            print("\n\n",file = f)
- 
+
+def save_knowledge_base():
+    with open('kb.md', 'w', encoding='utf-8') as f:
+        for constant in constant_definition:
+            print(constant + ":\n",file = f)
+            print(constant_definition[constant] + "\n\n",file = f)
  
         
 #------------------FOR DEBUG----------------------        
@@ -309,12 +324,29 @@ def leansketch(module, constant, searchlevel):
     
     
 if __name__ == "__main__":
-    thm ="""card_subgroup_dvd_card"""
-    leansketch("test",thm,3)
+    thm ="""quadratic_reciprocity"""          #main module
+    leansketch("quadratic",thm,2)
     for node in elab_graph:
         important[node] = False
         score = analyze_graph.get_score(node,elab_graph)
         if score > 3: important[node] = True
     visualize(elab_graph)   
-    save_file()
-    #prompt.prompt_llm("quadratic_reciprocity")
+      
+    ###############################################################
+    for constant in constant_definition:
+        print(constant,":\n")
+        print(constant_definition[constant],"\n\n")
+    save_knowledge_base()              #optional
+    
+    lemmas = []
+    lemma_constants = prompt.choose_lemmas(constant_definition,thm)
+    for lemma_constant in lemma_constants:
+        lemmas.append(constant_definition[lemma_constant])
+    
+    #definitions = prompt.choose_definitions(constant_definition,thm)
+    
+    proof = ''
+    
+    #for lemma in lemmas:
+    #    proof_lemma = prompt.translate_lemma(lemma,constant_definition[thm],definitions)
+        
