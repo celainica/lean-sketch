@@ -1,0 +1,26 @@
+使用步骤
+————————————————————————
+
+配置Lean4环境和Jixia（第三方工具，并不是我们的）:
+
+本地配置好lean4需要的elan和lake。
+从Jixia的Github下载Jixia，解压。             https://github.com/frenzymath/jixia
+用这个文件夹里的Analyzer文件夹替换Jixia的。
+用这个文件夹里的lakefile.lean替代Jixia的，这里面声明了使用Mathlib而Jixia原版没有。
+运行指令:
+lake update Mathlib
+lake build
+lake exe cache get
+-----------------------------------------------------
+
+使用Lean-Sketch
+
+将这个文件夹下Lean-Sketch文件夹的所有东西复制到Jixia的主目录下（lakefile的目录）
+在当前的python环境安装Pyvis库
+填写config文件和whitelist文件
+在Jixia主目录python leansketch.py运行Lean-Sketch
+
+
+
+
+其他： config的level是指检索多少层的文件，默认是2。
