@@ -4,10 +4,9 @@
 
 ### 1.1 Configure Lean4 and jixia
 
-1. Install **Lean4** by following the official instructions: [https://lean-lang.org/install/](https://lean-lang.org/install/).
+1. Install **Lean4** by following the [official instructions](https://lean-lang.org/install/).
 
-2. Configure the modified **jixia** included in our repository:
-   [https://github.com/pelicanhere/jixia/tree/symbol](https://github.com/pelicanhere/jixia/tree/symbol)
+2. Configure the modified [**jixia**](https://github.com/pelicanhere/jixia/tree/symbol) included in our repository.
 
 3. **Mathlib dependency:** Lean-Sketch requires **Mathlib**. Before building the modified jixia, add the following to `lakefile.lean` in the jixia root directory:
 
