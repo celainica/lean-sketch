@@ -353,7 +353,11 @@ if __name__ == "__main__":
     
     lemmas_raw, definitions_raw = prompt.choose_lemmas_definitions(constant_definition,thm)
     lemmas = []
-    definitions = []    
+    definitions = [] 
+    
+    if lemmas_raw == None: lemmas_raw = ["none"]
+    if definitions_raw == None: definitions_raw = ["none"]
+       
     for l in lemmas_raw:
         if l in constant_definition: lemmas.append(l)
     for l in definitions_raw:
