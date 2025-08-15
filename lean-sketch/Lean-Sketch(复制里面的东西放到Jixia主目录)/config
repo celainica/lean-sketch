@@ -1,5 +1,0 @@
-level=2
-theorem=<replace '<...>' with the name of the main theorem>
-main_module=<name of the file(not with .lean)>
-visualization=True
-api-key=<YOUR API KEY>
