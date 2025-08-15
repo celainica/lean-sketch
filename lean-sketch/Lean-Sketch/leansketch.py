@@ -31,9 +31,9 @@ def run_jixia(file_path, module_name):
                     target_file.write(line)
     
     initial = "lake env lean -o ./"+ module_name + ".olean ./tmp/tmp."+ module_name +".lean"
-    if not os.path.isfile("./tmp/" + module_name +".olean"):
+    if not os.path.isfile("./" + module_name +".olean"):
         print("running：",initial)
-    subprocess.run(initial)
+        subprocess.run(initial)
     run_flag = False
     if not os.path.isfile("./tmp/" + module_name + ".sym.json"):run_flag = True
     if not os.path.isfile("./tmp/" + module_name + ".decl.json"):run_flag = True
