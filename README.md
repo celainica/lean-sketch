@@ -8,8 +8,8 @@ A tool that analyze the logic structure of lean codes to extract crucial proof s
 
 Extracting informations from these two trees.
 
+---
 
-__________________________________________________________________________
 ### Example: Extracting Elab Tree for Lagrange Theorem in Group Theory
 Level 0 Dependency:
 ![level-0](./ELAB/elab_examples/lagrange_1.png)
