@@ -10,7 +10,7 @@ text_input = ""
 
 def get_response(messages):
     client = OpenAI(
-        api_key="xxx",
+        api_key="<your api-key>",
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
     )
     completion = client.chat.completions.create(
