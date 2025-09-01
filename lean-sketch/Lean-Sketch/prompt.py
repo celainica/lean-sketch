@@ -8,9 +8,15 @@ API_KEY = ""
 
 text_input = ""
 
-def get_response(messages):
+def get_response(messages):    
+    global API_KEY
+    if not API_KEY:
+        with open('./config', 'r', encoding='utf-8') as f:
+            p = f.read()
+        parameters = p.splitlines()
+        API_KEY = parameters[4][8:]  
     client = OpenAI(
-        api_key="<your api-key>",
+        api_key=API_KEY,
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
     )
     completion = client.chat.completions.create(
@@ -47,13 +53,7 @@ def get_response(messages):
 
 #-----------------------------Lemma Selector-----------------------------
 
-def init_lemma_selector():
-    global API_KEY
-    with open('./config', 'r', encoding = 'utf-8') as f:
-        p = f.read()  
-    parameters = p.splitlines()
-    API_KEY = parameters[0][8:]
-    
+def init_lemma_selector():    
     global messages
     messages = [
     {
@@ -411,11 +411,6 @@ Please study the examples below.
 
 def translate(constant_definitions,main_theorem,lemmas,definitions):
     text_input = ""
-    global API_KEY
-    with open('./config', 'r', encoding = 'utf-8') as f:
-        p = f.read()  
-    parameters = p.splitlines()
-    API_KEY = parameters[4][8:]
     init_translate()
     fewshot()
     text_input = text_input + """
